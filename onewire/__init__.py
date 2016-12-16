@@ -465,7 +465,9 @@ class OneWire(OwBase):
                                         logger.info("1-Wire: problem setting output {0}{1}: {2}".format(sensor, keys['O' + ch], e))
         self._discovered = True
 
+    # parse all items 
     def parse_item(self, item):
+        # check item for params
         if 'ow_addr' not in item.conf:
             return
 
@@ -493,16 +495,19 @@ class OneWire(OwBase):
             path = None
             if key == 'VOC':
                 path = '/' + addr + '/VAD'
-
+        
+        # add 1-wire object to dictionary (_ios, _ibuttons, _sensors)
         if addr in table:
             table[addr][key] = {'item': item, 'path': path}
         else:
             table[addr] = {key: {'item': item, 'path': path}}
 
+        # set method to call when item change 
         if key.startswith('O'):
             item._ow_path = table[addr][key]
             return self.update_item
 
+    # set value from item on the 1-wire bus object
     def update_item(self, item, caller=None, source=None, dest=None):
         try:
             self.write(item._ow_path['path'], self._flip[item()])
