@@ -2,8 +2,9 @@
 # vim: set encoding=utf-8 tabstop=4 softtabstop=4 shiftwidth=4 expandtab
 #########################################################################
 #  Copyright 2012-2014 Marcus Popp                         marcus@popp.mx
+#  Copyright 2016 Christian Strassburg
 #########################################################################
-#  This file is part of SmartHomeNG.    https://github.com/smarthomeNG//
+#  This file is part of SmartHomeNG.    https://github.com/smarthomeNG/
 #
 #  SmartHomeNG is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@ import socket
 import threading
 import time
 
-logger = logging.getLogger('')
+logger = logging.getLogger(__name__)
 
 
 class owex(Exception):
@@ -467,11 +468,14 @@ class OneWire(OwBase):
     def parse_item(self, item):
         if 'ow_addr' not in item.conf:
             return
+
         if 'ow_sensor' not in item.conf:
             logger.warning("1-Wire: No ow_sensor for {0} defined".format(item.id()))
             return
+
         addr = item.conf['ow_addr']
         key = item.conf['ow_sensor']
+
         if key in ['IA', 'IB', 'OA', 'OB', 'I0', 'I1', 'I2', 'I3', 'I4', 'I5', 'I6', 'I7', 'O0', 'O1', 'O2', 'O3', 'O4', 'O5', 'O6', 'O7']:
             table = self._ios
         elif key == 'B':
@@ -481,6 +485,7 @@ class OneWire(OwBase):
             return
         else:
             table = self._sensors
+
         if key not in self._supported:  # unknown key
             path = '/' + addr + '/' + key
             logger.info("1-Wire: unknown sensor specified for {0} using path: {1}".format(item.id(), path))
@@ -488,10 +493,12 @@ class OneWire(OwBase):
             path = None
             if key == 'VOC':
                 path = '/' + addr + '/VAD'
+
         if addr in table:
             table[addr][key] = {'item': item, 'path': path}
         else:
             table[addr] = {key: {'item': item, 'path': path}}
+
         if key.startswith('O'):
             item._ow_path = table[addr][key]
             return self.update_item
