@@ -377,9 +377,10 @@ class OneWire(OwBase):
         for addr in self._sensors:
             if not self.alive:
                 break
-            for key in self._sensors[addr]:
-                item = self._sensors[addr][key]['item']
-                path = self._sensors[addr][key]['path']
+            for id in self._sensors[addr]:
+                item = self._sensors[addr][id]['item']
+                path = self._sensors[addr][id]['path']
+                key = self._sensors[addr][id]['key']
                 if path is None:
                     logger.info("1-Wire: path not found for {0}".format(item.id()))
                     continue
@@ -454,9 +455,10 @@ class OneWire(OwBase):
                                     except Exception as e:
                                         logger.info("1-Wire: problem setting {0}{1} as input: {2}".format(sensor, keys['O' + ch], e))
                                     del(keys['O' + ch])
-                            for key in keys:
-                                if key in table[addr]:
-                                    table[addr][key]['path'] = sensor + keys[key]
+                            for id in table[addr]:
+                                for key in keys:
+                                    if key in table[addr][id]['key']:
+                                        table[addr][id]['path'] = sensor + keys[key]
                             for ch in ['A', 'B', '0', '1', '2', '3', '4', '5', '6', '7']:  # init PIO
                                 if 'O' + ch in table[addr]:
                                     try:
@@ -498,11 +500,14 @@ class OneWire(OwBase):
         
         # add 1-wire object to dictionary (_ios, _ibuttons, _sensors)
         if addr in table:
-            table[addr][key] = {'item': item, 'path': path}
-        else:
-            table[addr] = {key: {'item': item, 'path': path}}
+#            table[addr][key] = {'item': item, 'path': path}
+            table[addr][item.id()] = {'key': key, 'item': item, 'path': path}
 
-        # set method to call when item change 
+        else:
+#            table[addr] = {key: {'item': item, 'path': path}}
+            table[addr] = {item.id(): {'key': key, 'item': item, 'path': path}}
+
+        # set method to call when item change
         if key.startswith('O'):
             item._ow_path = table[addr][key]
             return self.update_item
