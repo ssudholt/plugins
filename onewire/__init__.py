@@ -448,23 +448,23 @@ class OneWire(OwBase):
                         else:
                             table = self._sensors
                         if addr in table:
-                            for ch in ['A', 'B']:
-                                if 'I' + ch in table[addr] and 'O' + ch in keys:  # set to 0 and delete output PIO
-                                    try:
-                                        self.write(sensor + keys['O' + ch], 0)
-                                    except Exception as e:
-                                        logger.info("1-Wire: problem setting {0}{1} as input: {2}".format(sensor, keys['O' + ch], e))
-                                    del(keys['O' + ch])
                             for id in table[addr]:
+                                for ch in ['A', 'B']:
+                                    if 'I' + ch in table[addr] and 'O' + ch in keys:  # set to 0 and delete output PIO
+                                        try:
+                                            self.write(sensor + keys['O' + ch], 0)
+                                        except Exception as e:
+                                            logger.info("1-Wire: problem setting {0}{1} as input: {2}".format(sensor, keys['O' + ch], e))
+                                        del(keys['O' + ch])
                                 for key in keys:
                                     if key in table[addr][id]['key']:
                                         table[addr][id]['path'] = sensor + keys[key]
-                            for ch in ['A', 'B', '0', '1', '2', '3', '4', '5', '6', '7']:  # init PIO
-                                if 'O' + ch in table[addr]:
-                                    try:
-                                        self.write(table[addr][key]['path'], self._flip[table[addr][key]['item']()])
-                                    except Exception as e:
-                                        logger.info("1-Wire: problem setting output {0}{1}: {2}".format(sensor, keys['O' + ch], e))
+                                for ch in ['A', 'B', '0', '1', '2', '3', '4', '5', '6', '7']:  # init PIO
+                                    if 'O' + ch in table[addr]:
+                                        try:
+                                            self.write(table[addr][id]['path'], self._flip[table[addr][id]['item']()])
+                                        except Exception as e:
+                                            logger.info("1-Wire: problem setting output {0}{1}: {2}".format(sensor, keys['O' + ch], e))
         self._discovered = True
 
     # parse all items 
