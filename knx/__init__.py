@@ -274,7 +274,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         self.logger.debug("KNX[{1}]: Item {0} is mapped to KNX Instance {1}".format(item, self.get_instance_name()))
 
         if self.has_iattr(item.conf,'knx_listen'):
-            knx_listen = item.conf['knx_listen']
+            knx_listen = self.get_iattr_value(item.conf,'knx_listen')
             if isinstance(knx_listen, str):
                 knx_listen = [knx_listen, ]
             for ga in knx_listen:
@@ -286,7 +286,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
                         self.gal[ga]['items'].append(item)
 
         if self.has_iattr(item.conf,'knx_init'):
-            ga = item.conf['knx_init']
+            ga = self.get_iattr_value(item.conf,'knx_init')
             self.logger.debug("KNX[{0}]: {1} listen on and init with {2}".format(self.get_instance_name(), item, ga))
             if not ga in self.gal:
                 self.gal[ga] = {'dpt': dpt, 'items': [item], 'logics': []}
@@ -296,7 +296,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
             self._init_ga.append(ga)
 
         if self.has_iattr(item.conf,'knx_cache'):
-            ga = item.conf['knx_cache']
+            ga = self.get_iattr_value(item.conf,'knx_cache')
             self.logger.debug("KNX[{0}]: {1} listen on and init with cache {2}".format(self.get_instance_name(), item, ga))
             if not ga in self.gal:
                 self.gal[ga] = {'dpt': dpt, 'items': [item], 'logics': []}
@@ -306,7 +306,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
             self._cache_ga.append(ga)
 
         if self.has_iattr(item.conf,'knx_reply'):
-            knx_reply = item.conf['knx_reply']
+            knx_reply = self.get_iattr_value(item.conf,'knx_reply')
             if isinstance(knx_reply, str):
                 knx_reply = [knx_reply, ]
             for ga in knx_reply:
@@ -317,12 +317,14 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
                     self.logger.warning("KNX[{0}]: {1} knx_reply ({2}) already defined for {3}".format(self.get_instance_name(), item.id(), ga, self.gar[ga]['item']))
 
         if self.has_iattr(item.conf,'knx_send'):
-            if isinstance(item.conf['knx_send'], str):
-                item.conf['knx_send'] = [item.conf['knx_send'], ]
+            if isinstance(self.get_iattr_value(item.conf,'knx_send'), str):
+                self.set_attr_value(item.conf, 'knx_send', [self.get_iattr_value(item.conf, 'knx_send'), ])
+                #item.conf['knx_send'] = [self.get_iattr_value(item.conf,'knx_send'), ]
 
         if self.has_iattr(item.conf,'knx_status'):
-            if isinstance(item.conf['knx_status'], str):
-                item.conf['knx_status'] = [item.conf['knx_status'], ]
+            if isinstance(self.get_iattr_value(item.conf,'knx_status'), str):
+                self.set_attr_value(item.conf,'knx_status',[self.get_iattr_value(item.conf,'knx_status'), ])
+                #item.conf['knx_status'] = [self.get_iattr_value(item.conf,'knx_status'), ]
 
         if self.has_iattr(item.conf,'knx_status') or self.has_iattr(item.conf,'knx_send'):
             return self.update_item
@@ -330,7 +332,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         return None
 
     def parse_logic(self, logic):
-        if self.has_iattr(logic.conf,'knx_dpt'):
+        if 'knx_dpt' in logic.conf:
             dpt = logic.conf['knx_dpt']
             if dpt not in dpts.decode:
                 self.logger.warning("KNX[{0}]: Ignoring {1} unknown dpt: {2}".format(self.get_instance_name(), logic, dpt))
@@ -357,7 +359,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
                 else:
                     self.gal[ga]['logics'].append(logic)
 
-        if self.has_iattr(logic.conf,'knx_reply'):
+        if 'knx_reply' in logic.conf:
             knx_reply = logic.conf['knx_reply']
             if isinstance(knx_reply, str):
                 knx_reply = [knx_reply, ]
