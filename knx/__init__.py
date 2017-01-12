@@ -31,7 +31,16 @@ import lib.connection
 import lib.model.smartplugin
 from . import dpts
 
-KEY_KNX_DPT = 'knx_dpt'
+KNX_DPT = 'knx_dpt'
+KNX_STATUS = 'knx_status'
+KNX_SEND = 'knx_send'
+KNX_REPLY = 'knx_reply'
+KNX_CACHE = 'knx_cache'
+KNX_INIT = 'knx_init'
+KNX_LISTEN = 'knx_listen'
+ITEM = 'item'
+LOGIC = 'logic'
+DPT='dpt'
 
 KNXREAD = 0x00
 KNXRESP = 0x40
@@ -139,7 +148,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         enable_cache = bytearray([0, 112])
         self._send(enable_cache)
         self.found_terminator = self.parse_length
-        if self._cache_ga != []:
+        if self._cache_sga != []:
             if self.connected:
                 self.logger.debug('KNX[{0}]: reading eibd cache'.format(self.get_instance_name()))
                 for ga in self._cache_ga:
@@ -212,7 +221,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
 
                 self._busmonitor(self._bm_format.format(self.get_instance_name(), src, dst, binascii.hexlify(payload).decode()))
                 return
-            dpt = self.gal[dst]['dpt']
+            dpt = self.gal[dst][DPT]
             try:
                 val = self.decode(payload, dpt)
             except Exception as e:
@@ -234,11 +243,11 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         elif flg == 'read':
             self.logger.debug("KNX[{0}]: {1} read {2}".format(self.get_instance_name(), src, dst))
             if dst in self.gar:  # read item
-                if self.gar[dst]['item'] is not None:
-                    item = self.gar[dst]['item']
-                    self.groupwrite(dst, item(), item.conf['knx_dpt'], 'response')
-                if self.gar[dst]['logic'] is not None:
-                    self.gar[dst]['logic'].trigger('KNX', src, None, dst)
+                if self.gar[dst][ITEM] is not None:
+                    item = self.gar[dst][ITEM]
+                    self.groupwrite(dst, item(), self.get_iattr_value(item.conf,KNX_DPT), 'response')
+                if self.gar[dst][LOGIC] is not None:
+                    self.gar[dst][LOGIC].trigger('KNX', src, None, dst)
 
     def run(self):
         self.alive = True
@@ -252,86 +261,84 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         if self.has_iattr(item.conf,'knx_dtp'):
             self.logger.error("KNX[{0}]: Ignoring {1}: please change knx_dtp to knx_dpt.".format(self.get_instance_name(), item))
             return None
-        if self.has_iattr(item.conf, KEY_KNX_DPT):
-            dpt = self.get_iattr_value(item.conf, KEY_KNX_DPT)
+        if self.has_iattr(item.conf, KNX_DPT):
+            dpt = self.get_iattr_value(item.conf, KNX_DPT)
             if dpt not in dpts.decode:
                 self.logger.warning("KNX[{0}]: Ignoring {1} unknown dpt: {2}".format(self.get_instance_name(), item, dpt))
                 return None
-        elif self.has_iattr(item.conf,'knx_status') or self.has_iattr(item.conf,'knx_send') or self.has_iattr(item.conf,'knx_reply') \
-                or self.has_iattr(item.conf,'knx_listen') or self.has_iattr(item.conf,'knx_init') or self.has_iattr(item.conf,'knx_cache'):
+        elif self.has_iattr(item.conf, KNX_STATUS) or self.has_iattr(item.conf, KNX_SEND) or self.has_iattr(item.conf,
+                                                                                                        KNX_REPLY) \
+                or self.has_iattr(item.conf, KNX_LISTEN) or self.has_iattr(item.conf, KNX_INIT) or self.has_iattr(item.conf,
+                                                                                                                  KNX_CACHE):
             self.logger.warning(
                 "KNX[{0}]: Ignoring {1}: please add knx_dpt.".format(self.get_instance_name(), item))
             return None
         else:
             return None
 
-        #if self.has_iattr(item.conf,'knx_instance'):
-        #    if not item.conf['knx_instance'] == self.get_instance_name():
-        #        return None
-        #else:
-        #    if not self.get_instance_name() == 'default':
-        #        return None
         self.logger.debug("KNX[{1}]: Item {0} is mapped to KNX Instance {1}".format(item, self.get_instance_name()))
 
-        if self.has_iattr(item.conf,'knx_listen'):
-            knx_listen = item.conf['knx_listen']
+        if self.has_iattr(item.conf, KNX_LISTEN):
+            knx_listen = self.get_iattr_value(item.conf, KNX_LISTEN)
             if isinstance(knx_listen, str):
                 knx_listen = [knx_listen, ]
             for ga in knx_listen:
                 self.logger.debug("KNX[{0}]: {1} listen on {2}".format(self.get_instance_name(), item, ga))
                 if not ga in self.gal:
-                    self.gal[ga] = {'dpt': dpt, 'items': [item], 'logics': []}
+                    self.gal[ga] = {DPT: dpt, 'items': [item], 'logics': []}
                 else:
                     if not item in self.gal[ga]['items']:
                         self.gal[ga]['items'].append(item)
 
-        if self.has_iattr(item.conf,'knx_init'):
-            ga = item.conf['knx_init']
+        if self.has_iattr(item.conf, KNX_INIT):
+            ga = self.get_iattr_value(item.conf, KNX_INIT)
             self.logger.debug("KNX[{0}]: {1} listen on and init with {2}".format(self.get_instance_name(), item, ga))
             if not ga in self.gal:
-                self.gal[ga] = {'dpt': dpt, 'items': [item], 'logics': []}
+                self.gal[ga] = {DPT: dpt, 'items': [item], 'logics': []}
             else:
                 if not item in self.gal[ga]['items']:
                     self.gal[ga]['items'].append(item)
             self._init_ga.append(ga)
 
-        if self.has_iattr(item.conf,'knx_cache'):
-            ga = item.conf['knx_cache']
+        if self.has_iattr(item.conf, KNX_CACHE):
+            ga = self.get_iattr_value(item.conf, KNX_CACHE)
             self.logger.debug("KNX[{0}]: {1} listen on and init with cache {2}".format(self.get_instance_name(), item, ga))
             if not ga in self.gal:
-                self.gal[ga] = {'dpt': dpt, 'items': [item], 'logics': []}
+                self.gal[ga] = {DPT: dpt, 'items': [item], 'logics': []}
             else:
                 if not item in self.gal[ga]['items']:
                     self.gal[ga]['items'].append(item)
             self._cache_ga.append(ga)
 
-        if self.has_iattr(item.conf,'knx_reply'):
-            knx_reply = item.conf['knx_reply']
+        if self.has_iattr(item.conf, KNX_REPLY):
+            knx_reply = self.get_iattr_value(item.conf, KNX_REPLY)
             if isinstance(knx_reply, str):
                 knx_reply = [knx_reply, ]
             for ga in knx_reply:
                 self.logger.debug("KNX[{0}]: {1} reply to {2}".format(self.get_instance_name(), item, ga))
                 if ga not in self.gar:
-                    self.gar[ga] = {'dpt': dpt, 'item': item, 'logic': None}
+                    self.gar[ga] = {DPT: dpt, ITEM: item, LOGIC: None}
                 else:
-                    self.logger.warning("KNX[{0}]: {1} knx_reply ({2}) already defined for {3}".format(self.get_instance_name(), item.id(), ga, self.gar[ga]['item']))
+                    self.logger.warning("KNX[{0}]: {1} knx_reply ({2}) already defined for {3}".format(self.get_instance_name(), item.id(), ga, self.gar[ga][ITEM]))
 
-        if self.has_iattr(item.conf,'knx_send'):
-            if isinstance(item.conf['knx_send'], str):
-                item.conf['knx_send'] = [item.conf['knx_send'], ]
+        if self.has_iattr(item.conf, KNX_SEND):
+            if isinstance(self.get_iattr_value(item.conf, KNX_SEND), str):
+                self.set_attr_value(item.conf, KNX_SEND, [self.get_iattr_value(item.conf, KNX_SEND), ])
+                #item.conf['knx_send'] = [self.get_iattr_value(item.conf,'knx_send'), ]
 
-        if self.has_iattr(item.conf,'knx_status'):
-            if isinstance(item.conf['knx_status'], str):
-                item.conf['knx_status'] = [item.conf['knx_status'], ]
+        if self.has_iattr(item.conf, KNX_STATUS):
+            if isinstance(self.get_iattr_value(item.conf, KNX_STATUS), str):
+                self.set_attr_value(item.conf, KNX_STATUS, [self.get_iattr_value(item.conf, KNX_STATUS), ])
+                #item.conf['knx_status'] = [self.get_iattr_value(item.conf,'knx_status'), ]
 
-        if self.has_iattr(item.conf,'knx_status') or self.has_iattr(item.conf,'knx_send'):
+        if self.has_iattr(item.conf, KNX_STATUS) or self.has_iattr(item.conf, KNX_SEND):
             return self.update_item
 
         return None
 
     def parse_logic(self, logic):
-        if self.has_iattr(logic.conf,'knx_dpt'):
-            dpt = logic.conf['knx_dpt']
+        if KNX_DPT in logic.conf:
+            dpt = logic.conf[KNX_DPT]
             if dpt not in dpts.decode:
                 self.logger.warning("KNX[{0}]: Ignoring {1} unknown dpt: {2}".format(self.get_instance_name(), logic, dpt))
                 return None
@@ -346,38 +353,38 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         #        return None
         self.logger.debug("KNX[{1}]: Logic {0} is mapped to KNX Instance {1}".format(logic, self.get_instance_name()))
 
-        if 'knx_listen' in logic.conf:
-            knx_listen = logic.conf['knx_listen']
+        if KNX_LISTEN in logic.conf:
+            knx_listen = logic.conf[KNX_LISTEN]
             if isinstance(knx_listen, str):
                 knx_listen = [knx_listen, ]
             for ga in knx_listen:
                 self.logger.debug("KNX[{0}]: {1} listen on {2}".format(self.get_instance_name(), logic, ga))
                 if not ga in self.gal:
-                    self.gal[ga] = {'dpt': dpt, 'items': [], 'logics': [logic]}
+                    self.gal[ga] = {DPT: dpt, 'items': [], 'logics': [logic]}
                 else:
                     self.gal[ga]['logics'].append(logic)
 
-        if self.has_iattr(logic.conf,'knx_reply'):
-            knx_reply = logic.conf['knx_reply']
+        if KNX_REPLY in logic.conf:
+            knx_reply = logic.conf[KNX_REPLY]
             if isinstance(knx_reply, str):
                 knx_reply = [knx_reply, ]
             for ga in knx_reply:
                 self.logger.debug("KNX[{0}]: {1} reply to {2}".format(self.get_instance_name(), logic, ga))
                 if ga in self.gar:
-                    if self.gar[ga]['logic'] is False:
-                        obj = self.gar[ga]['item']
+                    if self.gar[ga][LOGIC] is False:
+                        obj = self.gar[ga][ITEM]
                     else:
-                        obj = self.gar[ga]['logic']
+                        obj = self.gar[ga][LOGIC]
                     self.logger.warning("KNX[{0}]: {1} knx_reply ({2}) already defined for {3}".format(self.get_instance_name(), logic, ga, obj))
                 else:
-                    self.gar[ga] = {'dpt': dpt, 'item': None, 'logic': logic}
+                    self.gar[ga] = {DPT: dpt, ITEM: None, LOGIC: logic}
 
     def update_item(self, item, caller=None, source=None, dest=None):
-        if self.has_iattr(item.conf,'knx_send'):
+        if self.has_iattr(item.conf, KNX_SEND):
             if caller != 'KNX':
-                for ga in item.conf['knx_send']:
-                    self.groupwrite(ga, item(), item.conf['knx_dpt'])
-        if self.has_iattr(item.conf,'knx_status'):
-            for ga in item.conf['knx_status']:  # send status update
+                for ga in self.get_iattr_value(item.conf, KNX_SEND):
+                    self.groupwrite(ga, item(), self.get_iattr_value(KNX_DPT))
+        if self.has_iattr(item.conf, KNX_STATUS):
+            for ga in self.get_iattr_value(KNX_STATUS):  # send status update
                 if ga != dest:
-                    self.groupwrite(ga, item(), item.conf['knx_dpt'])
+                    self.groupwrite(ga, item(), self.get_iattr_value(KNX_DPT))
