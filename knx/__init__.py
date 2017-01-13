@@ -364,6 +364,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
                 else:
                     self.gal[ga]['logics'].append(logic)
 
+
         if KNX_REPLY in logic.conf:
             knx_reply = logic.conf[KNX_REPLY]
             if isinstance(knx_reply, str):
