@@ -148,7 +148,7 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         enable_cache = bytearray([0, 112])
         self._send(enable_cache)
         self.found_terminator = self.parse_length
-        if self._cache_sga != []:
+        if self._cache_ga != []:
             if self.connected:
                 self.logger.debug('KNX[{0}]: reading eibd cache'.format(self.get_instance_name()))
                 for ga in self._cache_ga:
