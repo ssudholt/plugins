@@ -384,8 +384,8 @@ class KNX(lib.connection.Client, lib.model.smartplugin.SmartPlugin):
         if self.has_iattr(item.conf, KNX_SEND):
             if caller != 'KNX':
                 for ga in self.get_iattr_value(item.conf, KNX_SEND):
-                    self.groupwrite(ga, item(), self.get_iattr_value(KNX_DPT))
+                    self.groupwrite(ga, item(), self.get_iattr_value(item.conf, KNX_DPT))
         if self.has_iattr(item.conf, KNX_STATUS):
-            for ga in self.get_iattr_value(KNX_STATUS):  # send status update
+            for ga in self.get_iattr_value(item.conf, KNX_STATUS):  # send status update
                 if ga != dest:
-                    self.groupwrite(ga, item(), self.get_iattr_value(KNX_DPT))
+                    self.groupwrite(ga, item(), self.get_iattr_value(item.conf, KNX_DPT))
